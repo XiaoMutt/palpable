@@ -11,13 +11,12 @@ README = (HERE / "README.md").read_text()
 # This call to setup() does all the work
 setup(
     name="palpable",
-    version="0.0.5",
+    version="0.0.6",
     description="A multiprocessing task server",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/XiaoMutt/palpable",
     author="Xiao",
-    # author_email="info@realpython.com",
     license="MIT",
     classifiers=[
         "License :: OSI Approved :: MIT License",
