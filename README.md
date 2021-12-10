@@ -159,7 +159,7 @@ class Procedure(Immutable):
         raise NotImplementedError
 ```
 In the run method, you can submit more tasks or run procedures using the messenger. You can also submit blocking tasks
-(that means you wait for the results for these tasks before moving on) in the run method. Palpable will handle and run 
+(that means you wait for the results of these tasks before moving on) in the run method. Palpable will handle and run 
 the blocking tasks to get the results, even when all the workers are blocked and waiting for results.
 
 Example:
