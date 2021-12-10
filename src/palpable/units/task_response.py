@@ -77,5 +77,5 @@ class TaskResponse(Immutable):
                 # task successful
                 return TaskResponse.SUCCESS(task_id, task_result.data, task_result.followup_task_ids)
             else:
-                # task unsuccessful
-                return TaskResponse.ERROR(task_id, task_result.data, task_result.followup_task_ids)
+                # task unsuccessful. task_result.data is the Exception
+                return TaskResponse.ERROR(task_id, str(task_result.data), task_result.followup_task_ids)

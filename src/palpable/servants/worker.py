@@ -143,6 +143,7 @@ class Worker(Servant):
                                                                             messenger.followup_task_ids))))
 
         except TaskFailed as result:
+            # a predefined known reason triggered the failure
             messenger.warning(f'Task failed (task id: {task_id} task name: {task.__class__.__name__}).')
             from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, result,
                                                                             messenger.followup_task_ids))))
