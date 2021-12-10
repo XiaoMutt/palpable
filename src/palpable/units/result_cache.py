@@ -60,12 +60,7 @@ class ResultCache(object):
         for task_id in task_ids:
             if task_id in self._task_id_to_result:
                 result = self._task_id_to_result.pop(task_id)
-                # todo delete
-                if result not in self._cache:
-                    for item in self._cache:
-                        print(item)
-                else:
-                    self._cache.remove(result)
+                self._cache.remove(result)
             elif task_id in self._task_id_waiting_for_results:
                 result = TaskResult(task_id, None, None)
             else:

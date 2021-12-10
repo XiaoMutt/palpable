@@ -45,7 +45,8 @@ class Worker(Servant):
         with self._pids_lock:
             self._pids = None
 
-    def _monitor_process(self, pid: int, process: Process, start_timestamp: float, from_process_queue: ProcessQueue,
+    def _monitor_process(self, pid: int, process: Process, start_timestamp: float,
+                         from_process_queue: ProcessQueue,
                          to_process_queue: ProcessQueue, task_id: str):
         """
         monitor the process
@@ -64,11 +65,12 @@ class Worker(Servant):
                     self._logger.error(msg)
                 elif msg_type == Messenger.SUBMIT:
                     # submit new task
-                    _requests = dill.loads(msg)
+                    _tasks = dill.loads(msg)
                     with self._result_cache_lock:
-                        self._result_cache.reserve(_requests)
+                        self._result_cache.reserve(_tasks)
                     with self._task_cache_lock:
-                        self._task_cache.offer(_requests)
+                        self._task_cache.offer(_tasks)
+                    to_process_queue.put(dill.dumps(len(_tasks)))  # acknowledge the number of tasks submitted
                 elif msg_type == Messenger.QUERY:
                     # query task result
                     _task_ids = msg

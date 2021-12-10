@@ -23,27 +23,27 @@ class Messenger(Immutable):
 
     time_unit = 0.01
 
-    def __init__(self, to_thread_queue: ProcessQueue, to_process_queue: ProcessQueue):
+    def __init__(self, from_process_queue: ProcessQueue, to_process_queue: ProcessQueue):
         """
-        Used by Worker process to exchange information with the Worker thread.
-        :param to_thread_queue: the queue receives message from the Worker process and get by the Worker Thread
+        Used in the Process started by the Worker to exchange information with the Worker monitoring thread.
+        :param from_process_queue: the queue receives message from the Worker process and get by the Worker Thread
         :param to_process_queue: the queue receives message from the Worker thread and get by the Worker Process
         """
-        self.to_thread_queue = to_thread_queue
+        self.from_process_queue = from_process_queue
         self.to_process_queue = to_process_queue
         self.followup_task_ids = []
 
     def debug(self, message: str):
-        self.to_thread_queue.put((self.DEBUG, message))
+        self.from_process_queue.put((self.DEBUG, message))
 
     def info(self, message: str):
-        self.to_thread_queue.put((self.INFO, message))
+        self.from_process_queue.put((self.INFO, message))
 
     def warning(self, message: str):
-        self.to_thread_queue.put((self.WARNING, message))
+        self.from_process_queue.put((self.WARNING, message))
 
     def error(self, message: str):
-        self.to_thread_queue.put((self.ERROR, message))
+        self.from_process_queue.put((self.ERROR, message))
 
     def print(self, *args, **kwargs):
         with StringIO() as buf:
@@ -90,18 +90,23 @@ class Messenger(Immutable):
         the current Task.
         """
 
+        self.from_process_queue.put((self.SUBMIT, dill.dumps(tasks)))
+        # waiting for acknowledge to come back to confirm submission
+        results = self.to_process_queue.get()
+        number = dill.loads(results)
+        if number != len(tasks):
+            raise Exception(f"Expected to submitting {len(tasks)} Task(s), but {number} Task(s) are submitted")
+
         if need_followup:
             for task in tasks:
                 self.followup_task_ids.append(task.task_id)
-
-        self.to_thread_queue.put((self.SUBMIT, dill.dumps(tasks)))
 
     def query_results(self, task_ids: tp.List[str]) -> tp.List[tp.Optional[TaskResult]]:
         """
         Query a list of task_ids with results
         This method blocks until results return
         """
-        self.to_thread_queue.put((self.QUERY, task_ids))
-        results = self.to_process_queue.get()
+        self.from_process_queue.put((self.QUERY, task_ids))
+        results = self.to_process_queue.get()  # waiting for results coming back
         res = dill.loads(results)
         return res

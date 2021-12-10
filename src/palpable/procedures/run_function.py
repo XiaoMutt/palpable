@@ -10,5 +10,7 @@ class RunFunction(Procedure):
 
     def run(self, messenger: Messenger):
         messenger.info(f"Run function `{self.function.__name__}` with args: `{self.args}` and kwargs: `{self.kwargs}`")
-        self.function.__globals__["print"] = messenger.print  # inject messenger.print as print
+
+        if hasattr(self.function, "__globals__"):
+            self.function.__globals__["print"] = messenger.print  # inject messenger.print as print
         return self.function(*self.args, **self.kwargs)

@@ -9,16 +9,8 @@ from ..procedures.procedure import Procedure
 from ..procedures.run_function import RunFunction
 from ..servants.server import Server
 from ..units.task import Task
-from ..units.task_response import TASK_RESPONSE
+from ..units.task_response import TaskResponse
 from ..units.task_result import TaskResult
-
-
-def _response_(function):
-    class Wrapper(object):
-        def __call__(self, *args, **kwargs):
-            return function(*args, **kwargs)
-
-    return Wrapper
 
 
 class Client(object):
@@ -119,42 +111,19 @@ class Client(object):
         return self._communicate(Server.GET_SERVER_STATUS)
 
     @classmethod
-    def _run_with_response(cls, function, *args, **kwargs) -> TASK_RESPONSE.RESPONSE:
+    def _run_with_response(cls, function, *args, **kwargs) -> TaskResponse.RESPONSE:
         try:
             result = function(*args, **kwargs)
-            if result is None:
-                # no such task
-                return TASK_RESPONSE.NONE(None, f"Task does not exist")
-            else:
-                task_id = result.task_id
-                if result.is_successful is None:
-                    # still running
-                    return TASK_RESPONSE.TBD(task_id, cls._get_ajax_relay(task_id))
-                elif result.is_successful is True:
-                    # task successful
-                    return TASK_RESPONSE.SUCCESS(task_id, result.data)
-                else:
-                    # task unsuccessful
-                    return TASK_RESPONSE.ERROR(task_id, result.data)
+            return TaskResponse.of(result)
 
         except ConnectionRefusedError:
-            return TASK_RESPONSE.ERROR(None, "TaskServer OFFLINE")
+            return TaskResponse.ERROR(None, "TaskServer OFFLINE")
         except Exception as err:
-            return TASK_RESPONSE.ERROR(None, str(err))
+            return TaskResponse.ERROR(None, str(err))
 
-    def ajax_run_procedure(self, procedure: Procedure, waiting_seconds: float = 1) -> TASK_RESPONSE.RESPONSE:
+    def ajax_run_procedure(self, procedure: Procedure, waiting_seconds: float = 1) -> TaskResponse.RESPONSE:
         return self._run_with_response(self.run_procedure, procedure, waiting_seconds)
 
-    def ajax_query_result(self, task_id: str) -> TASK_RESPONSE.RESPONSE:
+    def ajax_query_result(self, task_id: str) -> TaskResponse.RESPONSE:
         return self._run_with_response(self.query_result, task_id)
 
-    def ajax_map(self, function, params, waiting_seconds: float = 1) -> TASK_RESPONSE.RESPONSE:
-        return self._run_with_response(self.map, function, params, waiting_seconds)
-
-    @classmethod
-    def _get_ajax_relay(cls, task_id):
-        return {
-            "method": "POST",
-            "url": "ajax_query_result",
-            "params": {"task_id": task_id}
-        }
