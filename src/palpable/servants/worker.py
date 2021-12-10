@@ -137,17 +137,20 @@ class Worker(Servant):
             messenger.info(f'Task started (task id: {task_id} task name: {task.__class__.__name__}).')
             result = task.run(messenger)
             messenger.info(f'Task done (task id: {task_id} task name: {task.__class__.__name__}).')
-            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, True, result))))
+            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, True, result,
+                                                                            messenger.followup_task_ids))))
 
         except TaskFailed as result:
             messenger.warning(f'Task failed (task id: {task_id} task name: {task.__class__.__name__}).')
-            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, result))))
+            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, result,
+                                                                            messenger.followup_task_ids))))
 
         except Exception as err:
             messenger.error(f'Task encountered an exception '
                             f'(task id: {task_id} task name: {task.__class__.__name__}): '
                             f'{err.__class__.__name__} {err}.')
-            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, err))))
+            from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, err,
+                                                                            messenger.followup_task_ids))))
 
     def _run(self):
         process = None

@@ -6,9 +6,13 @@ Palpable is a producer-consumer type of task server that uses multiprocessing to
 small asynchronous task server and would not like to go through the complication of setting up rabbitmq and Celery,
 Palpable is the choice.
 
+Palpable uses Clients to submit Tasks to a Server which manages several Workers. A Task is constructed given a 
+Procedure which defines what should be done in a task. Each Task has a unique task_id for querying.
+
 ATTENTION: each task is run in a Process. If the task is easy, e.g. calculating the square root of a number, then using
 Palpable to calculate the square root of 1000 numbers will be way slower than directly calculating it, due to the 
-overhead of Process creation, monitoring, communication, and decommission.
+overhead of Process creation, monitoring, communication, and decommission. Therefore, palpable is suitable for heavy 
+tasks
 
 ## Install
 
@@ -119,7 +123,7 @@ server.close()
 
 ### Define a Customized Procedure
 
-Subclass Procedure and implement the run method
+Subclass the Procedure class and implement the run method. The run method will be called by the Workers to do the job.
 
 ```python
 
@@ -154,6 +158,9 @@ class Procedure(Immutable):
         """
         raise NotImplementedError
 ```
+In the run method, you can submit more tasks or run procedures using the messenger. You can also submit blocking tasks
+(that means you wait for the results for these tasks before moving on) in the run method. Palpable will handle and run 
+the blocking tasks to get the results, even when all the workers are blocked and waiting for results.
 
 Example:
 
@@ -194,36 +201,8 @@ class DoubleOddNumberProc(Procedure):
         double.__globals__["print"] = messenger.print  # inject messenger.print as print
 
         messenger.info("check if the numbers are all odd numbers")
-        # submit new CheckIfOddTask
-        # is_source_blocking is set to True because, we are waiting for the results before moving on
-        check_if_odd_task = Task(CheckIfOdd(self.nums), is_source_blocking=True)
-
-        # submit tasks. ATTENTION: submit_tasks accepts a list of tasks as arguments
-        messenger.submit_tasks([check_if_odd_task])
-
-        # query results. ATTENTION: query_results accepts a list of task_ids as arguments and return a list of
-        # TaskResults
-        while True:
-            result = messenger.query_results([check_if_odd_task.task_id])[0]
-            if result is None:
-                # no such task
-                raise Exception(f"The check_if_odd_task (ID: {check_if_odd_task.task_id}) does not exist. "
-                                f"This should not occur.")
-            else:
-                if result.is_successful is True:
-                    # task successful
-                    check_if_odd_task_result = result.data
-                    break
-
-                elif result.is_successful is False:
-                    # task unsuccessful
-                    if isinstance(result.data, Exception):
-                        raise result.data
-                    else:
-                        raise Exception(str(result.data))
-                else:
-                    # task is still running
-                    pass
+        # submit new CheckIfOdd procedure and wait for results
+        check_if_odd_task_result = messenger.run_procedure(CheckIfOdd(self.nums))
 
         if not check_if_odd_task_result:
             raise Exception("Error: the given numbers are not all odd")
@@ -231,6 +210,7 @@ class DoubleOddNumberProc(Procedure):
         res = [double(x) for x in self.nums]
 
         return res
+
 
 ```
 
@@ -255,8 +235,8 @@ if __name__ == "__main__":
 Check the source codes, test codes, and examples for more usage
 https://github.com/XiaoMutt/palpable
 
-## How it works
-### High Level Description
+## Mechanism
+### How it works
 Here is how it works at a high level:
 
 - you start a Palpable Server with n workers
@@ -275,7 +255,6 @@ Here is how it works at a high level:
           followup. Attention: this TaskResult will then be removed from the ResultCache.
 
 ### Architecture
-
 There are three classes that do the heavy lifting: Server, Manager, and Worker. Each of them has a main thread loop 
 that do some jobs:
 

@@ -54,7 +54,7 @@ class BaseTest(object):
 
         @classmethod
         def tearDownClass(cls) -> None:
-            shutil.rmtree(cls.logging_folder)
             cls.server.stop()
             cls.server.join()
             cls.server.close()
+            shutil.rmtree(cls.logging_folder)
