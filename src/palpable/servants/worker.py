@@ -1,3 +1,4 @@
+import traceback
 import typing as tp
 from datetime import datetime
 from multiprocessing import Queue as ProcessQueue, Process
@@ -149,9 +150,9 @@ class Worker(Servant):
                                                                             messenger.followup_task_ids))))
 
         except Exception as err:
-            messenger.error(f'Task encountered an exception '
-                            f'(task id: {task_id} task name: {task.__class__.__name__}): '
-                            f'{err.__class__.__name__} {err}.')
+            messenger.error(f'Task (task id: {task_id}, task name: {task.__class__.__name__}) '
+                            f'encountered an exception of {err.__class__.__name__}: {err}.\n' +
+                            traceback.format_exc())
             from_process_queue.put((Messenger.RESULT, dill.dumps(TaskResult(task_id, False, err,
                                                                             messenger.followup_task_ids))))
 
