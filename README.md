@@ -9,8 +9,8 @@ Palpable is the choice.
 Palpable uses Clients to submit Tasks to a Server which manages several Workers. A Task is constructed given a 
 Procedure which defines what should be done in a task. Each Task has a unique task_id for querying.
 
-ATTENTION: each task is run in a Process. If the task is easy, e.g. calculating the square root of a number, then using
-Palpable to calculate the square root of 1000 numbers will be way slower than directly calculating it, due to the 
+ATTENTION: each task runs in a Process. If the task is easy, e.g. calculating the square root of a number, then using
+Palpable to run the task 1000 times will be way slower than directly run the task 1000 times sequentially, due to the 
 overhead of Process creation, monitoring, communication, and decommission. Therefore, palpable is suitable for heavy 
 tasks
 
