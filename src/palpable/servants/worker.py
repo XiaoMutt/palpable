@@ -80,10 +80,20 @@ class Worker(Servant):
                     to_process_queue.put(dill.dumps(_results))
                 elif msg_type == Messenger.RESULT:
                     # result come back; worker process done
+                    process.join()
+                    with self._pids_lock:
+                        if self._pids[-1] != pid:  # sanity check
+                            # the pids should finish in a stack style
+                            self._logger.error(f"Process (pid {pid}) finished normally, but earlier than expected. "
+                                               f"This should not happen. Current pid stack: {self._pids}")
+                            self._pids.remove(pid)
+                        else:
+                            self._pids.pop()
+
                     result_ = dill.loads(msg)
                     with self._result_cache_lock:
                         self._result_cache.add([result_])
-                    process.join()
+
                     break
                 else:
                     self._logger.error(f"Unknown message type sent by the Task process {pid}: {msg}")
@@ -92,6 +102,7 @@ class Worker(Servant):
                     if not self._thread_keeps_running:
                         # worker receives stop signal
                         process.kill()
+
                         message = f"{self._name} has received stop signal. " \
                                   f"The task process {pid} has been killed."
                         with self._result_cache_lock:
@@ -103,7 +114,16 @@ class Worker(Servant):
                 # time out
                 if datetime.utcnow().timestamp() - start_timestamp > self._task_timeout_seconds:
                     process.kill()
-                    message = f"Task (task_id: {task_id}) time out. The task process {pid} has been killed"
+                    with self._pids_lock:
+                        if self._pids[-1] != pid:  # sanity check
+                            # the pids should finish in a stack style
+                            self._logger.error(f"Process (pid {pid}) timeout, but its has child processes."
+                                               f"Current pid stack: {self._pids}")
+                            self._pids.remove(pid)
+                        else:
+                            self._pids.pop()
+
+                    message = f"Task (task_id: {task_id}) time out. The task process {pid} has been killed."
                     with self._result_cache_lock:
                         self._result_cache.add(
                             [TaskResult(task_id, False, TaskTimeout(message))])
@@ -114,20 +134,20 @@ class Worker(Servant):
                 pass
             except Exception as err:
                 process.kill()
+                with self._pids_lock:
+                    if self._pids[-1] != pid:  # sanity check
+                        # the pids should finish in a stack style
+                        self._logger.error(f"Process (pid {pid}) encountered error and got killed. "
+                                           f"Its has child processes. Current pid stack: {self._pids}")
+                        self._pids.remove(pid)
+                    else:
+                        self._pids.pop()
+
                 message = f"Error occurred while monitoring task (task_id: {task_id}): {err}. " \
                           f"The task process has been killed."
                 self._result_cache.add([TaskResult(task_id, False, TaskKilledByMonitoringError(message))])
                 self._logger.error(message)
                 raise err
-
-        with self._pids_lock:
-            if self._pids is not None:  # if server receives stop signal self._pids may be None
-                if self._pids[-1] != pid:  # sanity check
-                    # the pids should finish in a stack style
-                    self._logger.error(f"pid {pid} finished earlier than expected. This should not happen."
-                                       f"current pids: {self._pids}")
-                else:
-                    self._pids.pop()
 
         del process
 

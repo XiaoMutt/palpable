@@ -1,4 +1,5 @@
 import math
+from random import random
 
 from src.palpable.procedures.map_function import MapFunction
 from src.palpable.procedures.procedure import Procedure
@@ -74,6 +75,45 @@ class GCD(Procedure):
         return self.b
 
 
+class MergeSortProcedure(Procedure):
+    def __init__(self, nums):
+        """
+        Check if the nums are all odd, if so double the value of the nums
+        :param nums: odd numbers
+        """
+        self.nums = nums
+
+    def run(self, messenger):
+        res = []
+        n = len(self.nums)
+        if n == 0:
+            return res
+        if n == 1:
+            return self.nums
+        left = messenger.run_procedure(MergeSortProcedure(self.nums[:n // 2]))
+        right = messenger.run_procedure(MergeSortProcedure(self.nums[n // 2:]))
+
+        i = 0
+        j = 0
+        while i < len(left) and j < len(right):
+            if left[i] < right[j]:
+                res.append(left[i])
+                i += 1
+            else:
+                res.append(right[j])
+                j += 1
+
+        while i < len(left):
+            res.append(left[i])
+            i += 1
+
+        while j < len(right):
+            res.append(right[j])
+            j += 1
+
+        return res
+
+
 class TestProcedure(BaseTest.Case):
 
     def test_procedure(self):
@@ -96,3 +136,13 @@ class TestProcedure(BaseTest.Case):
                 if result.is_successful:
                     break
         self.assertEqual(3, result.data)
+
+    def test_procedure_in_procedure(self):
+        array = [random() for _ in range(100)]
+
+        result = self.client.run_procedure(MergeSortProcedure(array), waiting_seconds=-1)
+
+        self.assertTrue(result.is_successful)
+        self.assertEqual(len(array), len(result.data))
+        for v1, v2 in zip(sorted(array), result.data):
+            self.assertEqual(v1, v2)
