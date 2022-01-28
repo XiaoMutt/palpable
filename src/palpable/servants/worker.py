@@ -131,7 +131,23 @@ class Worker(Servant):
                     break
             except Empty:
                 # no message
-                pass
+                if not process.is_alive():
+                    with self._pids_lock:
+                        if self._pids[-1] != pid:  # sanity check
+                            # the pids should finish in a stack style
+                            self._logger.error(f"Process (pid {pid}) seems to be dead, but its has child processes."
+                                               f"Current pid stack: {self._pids}")
+                            self._pids.remove(pid)
+                        else:
+                            self._pids.pop()
+
+                    message = f"Task (task_id: {task_id}) seems to be dead. The task process {pid} has been removed."
+                    with self._result_cache_lock:
+                        self._result_cache.add(
+                            [TaskResult(task_id, False, TaskTimeout(message))])
+                    self._logger.error(message)
+                    break
+
             except Exception as err:
                 process.kill()
                 with self._pids_lock:

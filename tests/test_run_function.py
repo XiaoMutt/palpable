@@ -1,5 +1,5 @@
 from src.palpable.units.task_exceptions import TaskFailed
-from tests.basis import BaseTest, TesterClient
+from tests.basis import BaseTest
 
 
 class CustomException(Exception):
@@ -22,12 +22,8 @@ def double(num):
     return 2 * num
 
 
-def distribute(nums):
-    # blocking at this process and waiting for map function to finish
-    return TesterClient().map(square, nums)
-
-
 class TestRunFunction(BaseTest.Case):
+    num_of_workers = 32
 
     def test_run_function(self):
         result = self.client.run(square, 5)

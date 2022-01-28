@@ -18,7 +18,7 @@ class Servant(object):
         self._thread_keeps_running: bool = False
         self._thread_keeps_running_lock: ThreadLock = ThreadLock()
 
-        self._time_unit = 0.01  # 0.01 second, used in sleep or queue.get
+        self._time_unit = 0.05  # 0.05 second, used in sleep or queue.get
 
     def _start_setup(self):
         """

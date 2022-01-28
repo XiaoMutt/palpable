@@ -115,6 +115,7 @@ class MergeSortProcedure(Procedure):
 
 
 class TestProcedure(BaseTest.Case):
+    num_of_workers = 32
 
     def test_procedure(self):
         result = self.client.run_procedure(IntegerFactorization([5, 9, 45]), waiting_seconds=-1)
@@ -141,7 +142,6 @@ class TestProcedure(BaseTest.Case):
         array = [random() for _ in range(100)]
 
         result = self.client.run_procedure(MergeSortProcedure(array), waiting_seconds=-1)
-
         self.assertTrue(result.is_successful)
         self.assertEqual(len(array), len(result.data))
         for v1, v2 in zip(sorted(array), result.data):
