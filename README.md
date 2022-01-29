@@ -151,8 +151,7 @@ class Procedure(Immutable):
         Use messenger.submit_tasks to submit sub tasks to the server
         Use messenger.query_results to query for results of the submitted sub tasks
 
-        If you call predefined functions in this method, and would like to direct the print output to Worker's log.
-        Do:
+        If you call predefined functions in this method, to catch possible `print` in the function, do:
             predefined_function.__globals__["print"] = messenger.print  # inject messenger.print as print
         See the RunFunction procedure as an example
 
