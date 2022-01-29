@@ -6,19 +6,29 @@ Palpable is a producer-consumer type of task server that uses multiprocessing to
 small asynchronous task server and would not like to go through the complication of setting up rabbitmq and Celery,
 Palpable is the choice.
 
-Palpable uses Clients to submit Tasks to a Server which manages several Workers. A Task is constructed given a 
-Procedure which defines what should be done in a task. Each Task has a unique task_id for querying.
-
-ATTENTION: each task runs in a Process. If the task is easy, e.g. calculating the square root of a number, then using
-Palpable to run the task 1000 times will be way slower than directly run the task 1000 times sequentially, due to the 
-overhead of Process creation, monitoring, communication, and decommission. Therefore, palpable is suitable for heavy 
-tasks
+Palpable uses Clients to submit Tasks to a Server which manages several Workers. A Task is constructed given a Procedure
+which defines what should be done in a task. Each Task has a unique task_id for querying.
 
 ## Install
 
 ```shell
 pip install palpable
 ```
+
+## ATTENTION Before Start Using
+
+### Palpable do not offer on disk persistence
+Palpable Server's data are all in memory. Once the server is shutdown, all data are lost.
+
+### Palpable run each task in its own process
+This ensures isolated environment for each task and multi-cpu usages. However, it adds overhead. Therefore,if each task 
+is easy, running these tasks will be way slower than directly run them in one process.
+
+### Python's `print` `multiprocessing` deadlock
+Do not use `print` in the code send to the Palpable server. Doing so may cause palpable Workers to deadlock without
+notice. Palpable is trying to catch the `print` statement in the code sent to the server, and change it to `log.info`, 
+but this is not guaranteed to work well. If you are not sure whether `print` will be sent to your Palpable server, use 
+`python -u` to start your Server, or set `PYTHONUNBUFFERED=1` as an environment variable, when starting your Server.
 
 ## Basic Usage
 
@@ -158,8 +168,9 @@ class Procedure(Immutable):
         """
         raise NotImplementedError
 ```
+
 In the run method, you can submit more tasks or run procedures using the messenger. You can also submit blocking tasks
-(that means you wait for the results of these tasks before moving on) in the run method. Palpable will handle and run 
+(that means you wait for the results of these tasks before moving on) in the run method. Palpable will handle and run
 the blocking tasks to get the results, even when all the workers are blocked and waiting for results.
 
 Example:
@@ -236,7 +247,9 @@ Check the source codes, test codes, and examples for more usage
 https://github.com/XiaoMutt/palpable
 
 ## Mechanism
+
 ### How it works
+
 Here is how it works at a high level:
 
 - you start a Palpable Server with n workers
@@ -255,8 +268,9 @@ Here is how it works at a high level:
           followup. Attention: this TaskResult will then be removed from the ResultCache.
 
 ### Architecture
-There are three classes that do the heavy lifting: Server, Manager, and Worker. Each of them has a main thread loop 
-that do some jobs:
+
+There are three classes that do the heavy lifting: Server, Manager, and Worker. Each of them has a main thread loop that
+do some jobs:
 
 - Server: the main thread listens incoming commands and starts a new short-lived thread to handle every received
   commands

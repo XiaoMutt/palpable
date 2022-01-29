@@ -1,5 +1,4 @@
 import typing as tp
-from io import StringIO
 from multiprocessing.queues import Queue as ProcessQueue
 from time import sleep
 
@@ -46,11 +45,7 @@ class Messenger(Immutable):
         self.from_process_queue.put((self.ERROR, message))
 
     def print(self, *args, **kwargs):
-        with StringIO() as buf:
-            kwargs["file"] = buf
-            kwargs["flush"] = True
-            print(*args, **kwargs)
-            self.info(buf.getvalue())
+        self.info(', '.join([repr(arg) for arg in args]))
 
     def run_procedure(self, procedure: Procedure):
         """
